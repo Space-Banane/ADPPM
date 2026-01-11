@@ -18,10 +18,25 @@ I couldn't find a proper tool that works from anywhere with a simple, lightweigh
 
 ## 🚀 Getting Started
 
-1. Download the latest release from the [Releases](https://github.com/Space-Banane/ADPPM/releases) page
-2. Run the executable
-3. Open your browser and navigate to `http://localhost:8080`
-4. Follow the on-screen instructions to manage profile pictures
+0. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Space-Banane/ADPPM.git
+   cd ADPPM
+   ```
+1. Install dependencies:
+
+   ```bash
+   go mod tidy
+   ```
+2. Build the project:
+
+   ```bash
+   go build .
+   ```
+3. Run the executable
+4. Open your browser and navigate to `http://localhost:8080`
+5. Follow the on-screen instructions to manage profile pictures
 
 ### 🎁 Bonus
 
