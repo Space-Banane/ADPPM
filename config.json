@@ -1,0 +1,10 @@
+{
+    "authentication": {
+        "enabled": false,
+        "username": "not-an-administrator-with-too-much-permissions",
+        "password": "iwouldrecommendchangingthislmao"
+    },
+    "server": {
+        "allow_external_access": false
+    }
+}

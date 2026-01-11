@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Directory Profile Picture Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-300 min-h-screen font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+    <nav class="bg-slate-900 border-b border-slate-800 px-6 py-6 mb-8">
+        <div class="container mx-auto max-w-xl flex items-center justify-center">
+            <h1 class="text-2xl font-bold text-slate-100 tracking-tight">AD Profile Picture Manager</h1>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 max-w-xl flex-grow">
+        <div class="bg-slate-800 rounded-lg shadow-xl border border-slate-700 overflow-hidden">
+            <div class="p-6 border-b border-slate-700 bg-slate-800/50">
+                <h2 class="text-lg font-medium text-slate-100">Update Profile Picture</h2>
+            </div>
+            <div class="p-6 space-y-6">
+                <div id="statusMessage" class="hidden mb-6 p-4 rounded-md text-sm border-l-4"></div>
+                <div>
+                    <label for="userSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                        Domain User
+                    </label>
+                    <div class="relative">
+                        <select id="userSelect" 
+                                class="w-full pl-4 pr-10 py-3 bg-slate-900 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-200 transition-shadow appearance-none">
+                            <option value="">Loading directory...</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                        Photo Upload
+                    </label>
+                    <div class="border-2 border-slate-700 border-dashed rounded-lg p-8 text-center hover:bg-slate-700/30 transition-colors bg-slate-900/50" id="dropZone">
+                        <!-- Removed gif support -->
+                        <input id="imageUpload" type="file" class="hidden" accept="image/png, image/jpeg" />
+                        <label for="imageUpload" class="cursor-pointer block w-full h-full">
+                            <div id="uploadPrompt">
+                                <div class="mx-auto w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-blue-500">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <p class="text-sm text-slate-300 font-medium">Click to upload or drag and drop</p>
+                                <p class="text-xs text-slate-500 mt-1">JPG or PNG only</p>
+                            </div>
+                            <div id="imagePreview" class="hidden">
+                                <img id="previewImg" class="mx-auto h-48 object-contain rounded-lg shadow-sm ring-1 ring-slate-700" alt="Preview">
+                                <p class="text-xs text-blue-400 mt-3 hover:text-blue-300 transition-colors">Click image to change</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="space-y-3 pt-4 border-t border-slate-700/50">
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <input type="checkbox" id="cropOption" class="w-5 h-5 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-offset-slate-800" checked>
+                        <span class="text-slate-300 group-hover:text-white transition-colors text-sm">Crop to Square (Fix Aspect Ratio)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <input type="checkbox" id="roundOption" class="w-5 h-5 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-offset-slate-800">
+                        <span class="text-slate-300 group-hover:text-white transition-colors text-sm">Round Image (Circular Mask)</span>
+                    </label>
+                </div>
+
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-900/50 border-t border-slate-700 flex justify-between items-center">
+                <button id="previewBtn" class="text-slate-400 hover:text-white font-medium py-2 px-4 rounded-md hover:bg-slate-800 transition-all text-sm hidden">
+                    Generate Preview
+                </button>
+                <div class="flex-grow"></div>
+                <button id="submitBtn" 
+                        class="bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-6 rounded-md shadow-lg shadow-blue-900/20 transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Update Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-8 text-center text-slate-600 text-sm pb-8">
+        <p>Made by <a href="https://space.reversed.dev" class="text-blue-500 hover:text-blue-400 hover:underline transition-colors font-medium">Space²</a></p>
+    </footer>
+
+    <script>
+        let selectedImage = null; // Stores original base64
+        let originalImage = null; // Backup for creating new previews from source
+
+        // Load users on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUsers();
+            
+            // Auto update preview when options change if image is selected
+            document.getElementById('cropOption').addEventListener('change', updatePreviewIfImageExists);
+            document.getElementById('roundOption').addEventListener('change', updatePreviewIfImageExists);
+            document.getElementById('previewBtn').addEventListener('click', generatePreview);
+        });
+
+        function updatePreviewIfImageExists() {
+            if (originalImage) {
+                // Show 'Refresh Preview' button or just do it?
+                // Let's show the button as active/needed or just do it.
+                // Doing it automatically is nicer.
+                generatePreview();
+            }
+        }
+
+        // Load users from API
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                if (response.status === 401) {
+                     // Basic Auth handled by browser, but if we get here logic is fine
+                }
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+                
+                const users = await response.json();
+                const select = document.getElementById('userSelect');
+                
+                if (users.length === 0) {
+                    select.innerHTML = '<option value="">No users found</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Select a user...</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.username;
+                    option.textContent = user.username;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                showMessage('Error loading users: ' + error.message, 'error');
+                document.getElementById('userSelect').innerHTML = '<option value="">Error loading users</option>';
+            }
+        }
+
+        // Handle image upload
+        document.getElementById('imageUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                originalImage = event.target.result;
+                selectedImage = originalImage;
+                
+                // Show preview UI
+                document.getElementById('uploadPrompt').classList.add('hidden');
+                document.getElementById('imagePreview').classList.remove('hidden');
+                document.getElementById('previewImg').src = selectedImage;
+                document.getElementById('previewBtn').classList.remove('hidden');
+                
+                // Trigger an initial preview generation to apply default "Crop" setting
+                generatePreview();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Generate Preview
+        async function generatePreview() {
+            if (!originalImage) return;
+
+            const previewBtn = document.getElementById('previewBtn');
+            const originalText = previewBtn.textContent;
+            previewBtn.textContent = 'Generating...';
+            previewBtn.disabled = true;
+
+            const crop = document.getElementById('cropOption').checked;
+            const round = document.getElementById('roundOption').checked;
+
+            try {
+                 const response = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageData: originalImage,
+                        options: { crop: crop, round: round }
+                    })
+                });
+
+                if (!response.ok) {
+                    const txt = await response.text();
+                    throw new Error(txt);
+                }
+
+                const result = await response.json();
+                document.getElementById('previewImg').src = result.imageData;
+                // Note: We don't update selectedImage here to be the preview,
+                // because we want to keep the original for re-cropping.
+                // However, wait, for SUBMITting, we want to submit the Original + Options.
+                
+            } catch (error) {
+                showMessage('Preview error: ' + error.message, 'error');
+            } finally {
+                previewBtn.textContent = originalText;
+                previewBtn.disabled = false;
+            }
+        }
+
+        // Handle submit
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            const username = document.getElementById('userSelect').value;
+            
+            if (!username) {
+                showMessage('Please select a user', 'error');
+                return;
+            }
+            
+            if (!originalImage) {
+                showMessage('Please select an image', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            const crop = document.getElementById('cropOption').checked;
+            const round = document.getElementById('roundOption').checked;
+
+            try {
+                const response = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        imageData: originalImage, // Send original, let server process
+                        options: { crop: crop, round: round }
+                    })
+                });
+
+                // Try to parse JSON error, fall back to text
+                let result;
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    const txt = await response.text();
+                    result = { error: txt };
+                }
+
+                if (!response.ok) {
+                    const errMsg = result.error || result.message || 'Failed to update profile picture';
+
+                    // Specific handling for image decode / format errors
+                    if (errMsg.toLowerCase().includes('failed to decode image') || errMsg.toLowerCase().includes('unsupported image format')) {
+                        showMessage('Image not supported or corrupted. Use a JPG/PNG professional headshot.', 'validation');
+                    } else if (errMsg.toLowerCase().includes('failed to set ad photo')) {
+                        showMessage('Directory update failed: ' + errMsg, 'error');
+                    } else if (response.status === 401) {
+                         showMessage('Unauthorized. Refresh page to login.', 'error');
+                    } else {
+                        showMessage('Error: ' + errMsg, 'error');
+                    }
+
+                    throw new Error(errMsg);
+                }
+
+                showMessage(result.message || 'Profile picture updated successfully!', 'success');
+
+                // Reset form
+                selectedImage = null;
+                originalImage = null;
+                document.getElementById('imageUpload').value = '';
+                document.getElementById('uploadPrompt').classList.remove('hidden');
+                document.getElementById('imagePreview').classList.add('hidden');
+                document.getElementById('previewBtn').classList.add('hidden');
+                document.getElementById('userSelect').value = '';
+
+            } catch (error) {
+                if (!error.message) {
+                    showMessage('An unknown error occurred', 'error');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Profile Picture';
+            }
+        });
+
+        // Show status message (supports 'error', 'validation', 'success')
+        function showMessage(message, type) {
+            const msgEl = document.getElementById('statusMessage');
+            msgEl.textContent = message;
+            let base = 'mb-6 p-4 rounded-md text-sm border-l-4 shadow-md ';
+
+            if (type === 'error') {
+                base += 'bg-red-900 border-red-500 text-red-100';
+            } else if (type === 'validation') {
+                base += 'bg-yellow-900 border-yellow-600 text-yellow-100';
+            } else {
+                base += 'bg-green-900 border-green-500 text-green-100';
+            }
+
+            msgEl.className = base;
+            msgEl.classList.remove('hidden');
+
+            setTimeout(() => {
+                msgEl.classList.add('hidden');
+            }, 7000);
+        }
+    </script>
+</body>
+</html>
