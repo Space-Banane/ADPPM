@@ -63,6 +63,7 @@ func main() {
 	// Setup routes
 	http.HandleFunc("/", authMiddleware(serveHTML))
 	http.HandleFunc("/api/users", authMiddleware(listUsers))
+	http.HandleFunc("/api/user-photo", authMiddleware(getUserPhoto))
 	http.HandleFunc("/api/submit", authMiddleware(submitProfilePicture))
 	http.HandleFunc("/api/preview", authMiddleware(previewImage))
 
@@ -164,6 +165,51 @@ func listUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+func getUserPhoto(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		writeJSONError(w, http.StatusBadRequest, "Username parameter required")
+		return
+	}
+
+	// PowerShell command to get user's thumbnailPhoto
+	psCommand := fmt.Sprintf(`
+		$user = Get-ADUser -Identity '%s' -Properties thumbnailPhoto
+		if ($user.thumbnailPhoto) {
+			[System.Convert]::ToBase64String($user.thumbnailPhoto)
+		}
+	`, username)
+
+	cmd := exec.Command("powershell", "-NoProfile", "-Command", psCommand)
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Printf("Error getting photo for %s: %v, Output: %s", username, err, string(output))
+		// Return empty response for users without photos
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"imageData": ""})
+		return
+	}
+
+	base64Photo := strings.TrimSpace(string(output))
+	if base64Photo == "" {
+		// No photo set
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"imageData": ""})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"imageData": "data:image/jpeg;base64," + base64Photo,
+	})
 }
 
 func previewImage(w http.ResponseWriter, r *http.Request) {
